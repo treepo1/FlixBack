@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model avaliacao {
+  usuario_id  Int
+  conteudo_id Int
+  nota        Float
+  id          String   @id @db.VarChar(45)
+  conteudo    conteudo @relation(fields: [conteudo_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_has_conteudo_conteudo1")
+  usuario     usuario  @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usuario_has_conteudo_usuario1")
+
+  @@index([conteudo_id], map: "fk_usuario_has_conteudo_conteudo1_idx")
+  @@index([usuario_id], map: "fk_usuario_has_conteudo_usuario1_idx")
+}
+
+model comentario {
+  id               Int          @id @default(autoincrement())
+  texto            String       @db.VarChar(500)
+  conteudo_id      Int
+  usuario_id       Int
+  resposta         Int?
+  comentario       comentario?  @relation("comentarioTocomentario", fields: [resposta], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_comentario_comentario1")
+  conteudo         conteudo     @relation(fields: [conteudo_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_comentario_conteudo1")
+  usuario          usuario      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_comentario_usuario1")
+  other_comentario comentario[] @relation("comentarioTocomentario")
+
+  @@index([resposta], map: "fk_comentario_comentario1_idx")
+  @@index([conteudo_id], map: "fk_comentario_conteudo1_idx")
+  @@index([usuario_id], map: "fk_comentario_usuario1_idx")
+}
+
+model conteudo {
+  titulo             String            @db.VarChar(50)
+  descricao          String?           @db.VarChar(500)
+  data_lancamento    DateTime?         @db.DateTime(0)
+  orcamento          Float
+  id                 Int               @id @default(autoincrement())
+  linguagem_original String            @db.VarChar(45)
+  status             String            @db.VarChar(45)
+  avaliacao          avaliacao[]
+  comentario         comentario[]
+  conteudo_genero    conteudo_genero[]
+  dirige             dirige[]
+  episodio           episodio?
+  filme              filme?
+  imagem             imagem[]
+  serie              serie?
+  temporada          temporada?
+  video              video[]
+}
+
+model conteudo_genero {
+  conteudo_id Int
+  genero_id   Int
+  conteudo    conteudo @relation(fields: [conteudo_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_conteudo_has_genero_conteudo1")
+  genero      genero   @relation(fields: [genero_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_conteudo_has_genero_genero1")
+
+  @@id([conteudo_id, genero_id])
+  @@index([conteudo_id], map: "fk_conteudo_has_genero_conteudo1_idx")
+  @@index([genero_id], map: "fk_conteudo_has_genero_genero1_idx")
+}
+
+model diretor {
+  id        Int      @id @default(autoincrement())
+  nome      String   @db.VarChar(45)
+  sobrenome String?  @db.VarChar(45)
+  dirige    dirige[]
+}
+
+model dirige {
+  diretor_id  Int
+  conteudo_id Int
+  conteudo    conteudo @relation(fields: [conteudo_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_diretor_has_conteudo_conteudo1")
+  diretor     diretor  @relation(fields: [diretor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_diretor_has_conteudo_diretor1")
+
+  @@id([diretor_id, conteudo_id])
+  @@index([conteudo_id], map: "fk_diretor_has_conteudo_conteudo1_idx")
+  @@index([diretor_id], map: "fk_diretor_has_conteudo_diretor1_idx")
+}
+
+model emissora {
+  nome      String      @db.VarChar(45)
+  id        Int         @id @default(autoincrement())
+  transmite transmite[]
+}
+
+model filme {
+  conteudo_id Int      @id
+  bilheteria  Float    @default(0)
+  sinopse     String?  @db.VarChar(400)
+  duracao     Float
+  conteudo    conteudo @relation(fields: [conteudo_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_filme_conteudo")
+
+  @@index([conteudo_id], map: "fk_filme_conteudo_idx")
+}
+
+model genero {
+  id              Int               @id @default(autoincrement())
+  nome            String            @db.VarChar(45)
+  conteudo_genero conteudo_genero[]
+}
+
+model imagem {
+  url         String   @db.VarChar(100)
+  id          Int      @id @default(autoincrement())
+  conteudo_id Int
+  fl_poster   Boolean? @db.Bit(1)
+  conteudo    conteudo @relation(fields: [conteudo_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_imagem_conteudo1")
+
+  @@index([conteudo_id], map: "fk_imagem_conteudo1_idx")
+}
+
+model serie {
+  conteudo_id     Int         @id
+  data_lancamento DateTime?   @db.DateTime(0)
+  audiencia       Float?
+  conteudo        conteudo    @relation(fields: [conteudo_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_serie_conteudo1")
+  temporada       temporada[]
+  transmite       transmite[]
+
+  @@index([conteudo_id], map: "fk_serie_conteudo1_idx")
+}
+
+model temporada {
+  numero      Int
+  data_inicio DateTime? @db.DateTime(0)
+  data_fim    DateTime? @db.DateTime(0)
+  conteudo_id Int       @id
+  serie_id    Int
+  conteudo    conteudo  @relation(fields: [conteudo_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_temporada_conteudo1")
+  serie       serie     @relation(fields: [serie_id], references: [conteudo_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_temporada_serie1")
+
+  @@index([conteudo_id], map: "fk_temporada_conteudo1_idx")
+  @@index([serie_id], map: "fk_temporada_serie1_idx")
+}
+
+model transmite {
+  emissora_id Int
+  serie_id    Int
+  emissora    emissora @relation(fields: [emissora_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_emissora_has_serie_emissora1")
+  serie       serie    @relation(fields: [serie_id], references: [conteudo_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_emissora_has_serie_serie1")
+
+  @@id([emissora_id, serie_id])
+  @@index([emissora_id], map: "fk_emissora_has_serie_emissora1_idx")
+  @@index([serie_id], map: "fk_emissora_has_serie_serie1_idx")
+}
+
+model usuario {
+  id         Int          @id @default(autoincrement())
+  email      String       @db.VarChar(45)
+  login      String       @db.VarChar(45)
+  senha      String       @db.VarChar(45)
+  fl_admin   Boolean?     @db.Bit(1)
+  avaliacao  avaliacao[]
+  comentario comentario[]
+}
+
+model video {
+  id          Int      @id @default(autoincrement())
+  url         String?  @db.VarChar(100)
+  conteudo_id Int
+  fl_trailer  Boolean? @db.Bit(1)
+  conteudo    conteudo @relation(fields: [conteudo_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_video_conteudo1")
+
+  @@index([conteudo_id], map: "fk_video_conteudo1_idx")
+}
+
+model episodio {
+  duracao      Float?
+  audiencia    Float?
+  conteudo_id  Int      @id
+  serie_id     Int
+  temporada_id Int
+  conteudo     conteudo @relation(fields: [conteudo_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_episódio_conteudo1")
+
+  @@index([conteudo_id], map: "fk_episódio_conteudo1_idx")
+  @@index([serie_id, temporada_id], map: "fk_episódio_temporada1")
+}
