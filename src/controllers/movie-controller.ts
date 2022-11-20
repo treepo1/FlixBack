@@ -122,7 +122,7 @@ class MovieController {
             duracao,
             generos } = req.body;
 
-        const updatedMovie = await prisma.conteudo.update({
+        const updatedMovie = prisma.conteudo.update({
             where:{id: Number(id)},
             data:{
                 titulo,
@@ -141,78 +141,49 @@ class MovieController {
                 }
             })
 
-            await prisma.conteudo_genero.deleteMany({
+           const deletedConteudoGenero =  prisma.conteudo_genero.deleteMany({
                 where:{
                     conteudo_id: Number(id)
                 }
             })
 
+            const deleteImages = prisma.imagem.deleteMany({
+                where:{
+                    conteudo_id: Number(id)
+                }
+            })
 
-            generos.map( async (genero:any) => (
-                await prisma.conteudo_genero.upsert({
-                    where: {
-                        conteudo_id_genero_id: {
-                            conteudo_id: Number(id),
-                            genero_id: genero.id
-                        }
-                    },
-                    update: {
-                        conteudo_id: Number(id),
-                        genero_id: genero.id
-                    },
-                    create: {
-                        conteudo_id: Number(id),
-                        genero_id: genero.id
-                    }
-                })
-            ))
+            const deleteVideos = prisma.video.deleteMany({
+                where:{
+                    conteudo_id: Number(id)
+                }
+            })
+
+            const createCounteudoGenero = prisma.conteudo_genero.createMany({
+                data:generos.map((genero:any) => (
+                    {genero_id: genero.id,
+                    conteudo_id: Number(id)}
+                ))
+            })
+
+            const createdImages = prisma.imagem.createMany({
+                data: imagens.map((imagem: any) => (
+                    {url: imagem.url,
+                    fl_poster: imagem.fl_poster,
+                    conteudo_id: Number(id)}
+                ))
+            })
+
+            const createdVideos = prisma.video.createMany({
+                data: videos.map((video: any) => (
+                    {url: video.url,
+                    fl_trailer: video.fl_trailer,
+                    conteudo_id: Number(id)}
+                ))
+            })
 
 
-            if(imagens) {
-                imagens.forEach(async (imagem: any) => {
-                    if(imagem.id) {
-                        await prisma.imagem.update({
-                            where:{id: Number(imagem.id)},
-                            data:{
-                                url: imagem.url,
-                                fl_poster: imagem.fl_poster,
-                                conteudo_id: updatedMovie.id
-                            }
-                        })
-                    } else {
-                        await prisma.imagem.create({
-                            data:{
-                                url: imagem.url,
-                                fl_poster: imagem.fl_poster,
-                                conteudo_id: updatedMovie.id
-                            }
-                        })
-                    }
-                })
-            }
-
-            if(videos) {
-                videos.forEach(async (video: any) => {
-                    if(video.id) {
-                        await prisma.video.update({
-                            where:{id: Number(video.id)},
-                            data:{
-                                url: video.url,
-                                fl_trailer: video.fl_trailer,
-                                conteudo_id: updatedMovie.id
-                            }
-                        })
-                    } else {
-                        await prisma.video.create({
-                            data:{
-                                url: video.url,
-                                fl_trailer: video.fl_trailer,
-                                conteudo_id: updatedMovie.id
-                            }
-                        })
-                    }
-                })
-            }
+            await prisma.$transaction([updatedMovie, deletedConteudoGenero, deleteImages, deleteVideos, createCounteudoGenero, createdImages, createdVideos])
 
 
 
